@@ -382,7 +382,7 @@ impl Address {
     /// ```
     #[inline]
     #[must_use]
-    pub fn from_word_chain_id(word: FixedBytes<32>, chain_id: u64) -> Self {
+    pub fn from_word_and_chain_id(word: FixedBytes<32>, chain_id: u64) -> Self {
         Self(FixedBytes(word[12..].try_into().unwrap()), chain_id)
     }
 }
