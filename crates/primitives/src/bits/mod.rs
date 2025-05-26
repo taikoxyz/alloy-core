@@ -18,3 +18,8 @@ mod rlp;
 
 #[cfg(feature = "serde")]
 mod serde;
+
+#[macro_use]
+mod gwyneth;
+
+pub use gwyneth::DEFAULT_CHAIN_ID;

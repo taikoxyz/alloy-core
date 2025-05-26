@@ -1,4 +1,4 @@
-use crate::{aliases::U160, utils::keccak256, FixedBytes};
+use crate::{aliases::U160, utils::keccak256, wrap_fixed_bytes_with_chain_id, FixedBytes};
 use alloc::{
     borrow::Borrow,
     string::{String, ToString},
@@ -42,7 +42,7 @@ impl fmt::Display for AddressError {
     }
 }
 
-wrap_fixed_bytes!(
+wrap_fixed_bytes_with_chain_id!(
     // we implement Display with the checksum, so we don't derive it
     extra_derives: [],
     /// An Ethereum address, 20 bytes in length.
@@ -89,7 +89,7 @@ wrap_fixed_bytes!(
 impl From<U160> for Address {
     #[inline]
     fn from(value: U160) -> Self {
-        Self(FixedBytes(value.to_be_bytes()))
+        Self(FixedBytes(value.to_be_bytes()), crate::DEFAULT_CHAIN_ID)
     }
 }
 
@@ -130,7 +130,7 @@ impl Address {
     #[inline]
     #[must_use]
     pub fn from_word(word: FixedBytes<32>) -> Self {
-        Self(FixedBytes(word[12..].try_into().unwrap()))
+        Self(FixedBytes(word[12..].try_into().unwrap()), crate::DEFAULT_CHAIN_ID)
     }
 
     /// Left-pads the address to 32 bytes (EVM word size).
