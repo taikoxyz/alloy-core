@@ -1,4 +1,6 @@
+/// Default chain ID for Gwyneth, which is 1.
 pub const DEFAULT_CHAIN_ID: u64 = 1;
+
 /// Wrap a fixed-size byte array in a newtype, delegating all methods to the
 /// underlying [`crate::FixedBytes`].
 ///
