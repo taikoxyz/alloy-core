@@ -1,3 +1,7 @@
+use crate::U160;
+
+use super::{Address, FixedBytes};
+
 /// Default chain ID for Gwyneth, which is 1.
 pub const DEFAULT_CHAIN_ID: u64 = 1;
 
@@ -356,4 +360,29 @@ macro_rules! impl_serde_with_chain_id {
             }
         }
     };
+}
+
+impl From<(U160, u64)> for Address {
+    #[inline]
+    fn from((value, chain_id): (U160, u64)) -> Self {
+        Self(FixedBytes(value.to_be_bytes()), chain_id)
+    }
+}
+
+impl Address {
+    /// Creates an Ethereum address from an EVM word's upper 20 bytes and chain id
+    /// (`word[12..]`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use alloy_primitives::{address, b256, Address};
+    /// let word = b256!("0x000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa96045");
+    /// assert_eq!(Address::from_word(word), address!("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"));
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn from_word_chain_id(word: FixedBytes<32>, chain_id: u64) -> Self {
+        Self(FixedBytes(word[12..].try_into().unwrap()), chain_id)
+    }
 }
