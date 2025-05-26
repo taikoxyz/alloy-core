@@ -1,6 +1,9 @@
 #[macro_use]
 mod macros;
 
+#[macro_use]
+mod gwyneth;
+
 mod address;
 pub use address::{Address, AddressChecksumBuffer, AddressError};
 
@@ -18,8 +21,5 @@ mod rlp;
 
 #[cfg(feature = "serde")]
 mod serde;
-
-#[macro_use]
-mod gwyneth;
 
 pub use gwyneth::DEFAULT_CHAIN_ID;
