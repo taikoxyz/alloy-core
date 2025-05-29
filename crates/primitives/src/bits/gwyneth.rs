@@ -108,17 +108,32 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
             }
         }
 
-        impl<'a> $crate::private::From<&'a [u8; $n]> for $name {
+        impl $crate::private::From<&[u8; $n]> for $name {
             #[inline]
-            fn from(value: &'a [u8; $n]) -> Self {
+            fn from(value: &[u8; $n]) -> Self {
                 Self($crate::FixedBytes(*value), $crate::DEFAULT_CHAIN_ID)
             }
         }
 
-        impl<'a> $crate::private::From<&'a mut [u8; $n]> for $name {
+        impl $crate::private::From<&mut [u8; $n]> for $name {
             #[inline]
-            fn from(value: &'a mut [u8; $n]) -> Self {
+            fn from(value: &mut [u8; $n]) -> Self {
                 Self($crate::FixedBytes(*value), $crate::DEFAULT_CHAIN_ID)
+            }
+        }
+
+
+        impl $crate::private::From<(&[u8; $n], u64)> for $name {
+            #[inline]
+            fn from((value, chain_id): (&[u8; $n], u64)) -> Self {
+                Self($crate::FixedBytes(*value), chain_id)
+            }
+        }
+
+        impl $crate::private::From<(&mut [u8; $n], u64)> for $name {
+            #[inline]
+            fn from((value, chain_id): (&mut [u8; $n], u64)) -> Self {
+                Self($crate::FixedBytes(*value), chain_id)
             }
         }
 
@@ -143,6 +158,26 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
             }
         }
 
+        impl $crate::private::TryFrom<(&[u8], u64)> for $name {
+            type Error = $crate::private::core::array::TryFromSliceError;
+
+            #[inline]
+            fn try_from((slice, chain_id): (&[u8], u64)) -> Result<Self, Self::Error> {
+                // SAFETY: `$name` is `repr(transparent)` for `FixedBytes<$n>`
+                // and consequently `[u8; $n]`
+                <&[u8; $n] as $crate::private::TryFrom<&[u8]>>::try_from(slice)
+                    .map(|array_ref| Self(unsafe { $crate::private::core::mem::transmute::<&[u8; $n], &$crate::FixedBytes<$n>>(array_ref).clone() }, chain_id))
+            }
+        }
+
+        impl $crate::private::TryFrom<(&mut [u8], u64)> for $name {
+            type Error = $crate::private::core::array::TryFromSliceError;
+
+            #[inline]
+            fn try_from((slice, chain_id): (&mut [u8], u64)) -> Result<Self, Self::Error> {
+                <Self as $crate::private::TryFrom<(&[u8], u64)>>::try_from((&*slice, chain_id))
+            }
+        }
 
         impl $crate::private::AsRef<[u8; $n]> for $name {
             #[inline]
