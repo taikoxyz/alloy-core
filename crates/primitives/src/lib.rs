@@ -101,7 +101,7 @@ pub mod private {
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
-        cmp::Ordering,
+        cmp::{Ord, Ordering, PartialEq, PartialOrd},
         prelude::rust_2021::*,
         str::FromStr,
     };

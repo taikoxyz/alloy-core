@@ -33,14 +33,12 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
         $vis:vis struct $name:ident<$n:literal>;
     ) => {
         $(#[$attrs])*
+        #[allow(clippy::derived_hash_with_manual_eq)]
         #[derive(
             Clone,
             Copy,
             Default,
-            PartialEq,
             Eq,
-            PartialOrd,
-            Ord,
             Hash,
             $crate::private::derive_more::AsMut,
             $crate::private::derive_more::AsRef,
@@ -71,6 +69,27 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
             #[inline]
             fn from(value: [u8; $n]) -> Self {
                 Self($crate::FixedBytes(value), $crate::DEFAULT_CHAIN_ID)
+            }
+        }
+
+        impl $crate::private::PartialEq for $name {
+            #[inline]
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+
+        impl $crate::private::Ord for $name {
+            #[inline]
+            fn cmp(&self, other: &Self) -> $crate::private::core::cmp::Ordering {
+                self.0.cmp(&other.0)
+            }
+        }
+
+        impl $crate::private::PartialOrd for $name {
+            #[inline]
+            fn partial_cmp(&self, other: &Self) -> Option<$crate::private::core::cmp::Ordering> {
+                Some(self.0.cmp(&other.0))
             }
         }
 
