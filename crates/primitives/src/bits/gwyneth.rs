@@ -389,6 +389,13 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
 
 #[doc(hidden)]
 #[macro_export]
+#[cfg(not(feature = "serde"))]
+macro_rules! impl_serde_with_chain_id {
+    ($t:ty) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
 #[cfg(feature = "serde")]
 macro_rules! impl_serde_with_chain_id {
     ($t:ty) => {
