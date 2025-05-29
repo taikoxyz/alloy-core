@@ -262,7 +262,7 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
         }
 
         $crate::impl_fb_traits!($name, $n);
-        $crate::impl_rlp!($name, $n);
+        $crate::impl_rlp_with_chain_id!($name, $n);
         $crate::impl_serde_with_chain_id!($name);
         $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
@@ -421,6 +421,46 @@ macro_rules! impl_serde_with_chain_id {
             }
         }
     };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "rlp")]
+macro_rules! impl_rlp_with_chain_id {
+    ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
+        impl $crate::private::alloy_rlp::Decodable for $t {
+            #[inline]
+            fn decode(buf: &mut &[u8]) -> $crate::private::alloy_rlp::Result<Self> {
+                $crate::private::alloy_rlp::Decodable::decode(buf)
+                    .map(|addr| Self(addr, $crate::DEFAULT_CHAIN_ID))
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "rlp")))]
+        impl $crate::private::alloy_rlp::Encodable for $t {
+            #[inline]
+            fn length(&self) -> usize {
+                $crate::private::alloy_rlp::Encodable::length(&self.0)
+            }
+
+            #[inline]
+            fn encode(&self, out: &mut dyn $crate::private::alloy_rlp::BufMut) {
+                $crate::private::alloy_rlp::Encodable::encode(&self.0, out)
+            }
+        }
+
+        $crate::private::alloy_rlp::impl_max_encoded_len!($t, {
+            $n + $crate::private::alloy_rlp::length_of_length($n)
+        });
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "rlp"))]
+macro_rules! impl_rlp_with_chain_id {
+    ($t:ty, $n:literal) => {};
 }
 
 impl From<(U160, u64)> for Address {
