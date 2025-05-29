@@ -386,9 +386,15 @@ impl Address {
         Self(FixedBytes(word[12..].try_into().unwrap()), chain_id)
     }
 
-    /// Changes the chain ID of this address.
+    /// Changes the chain id of this address.
     #[inline]
     pub fn set_chain_id(&mut self, chain_id: u64) {
         self.1 = chain_id;
+    }
+
+    /// Gets the chain id of this address.
+    #[inline]
+    pub fn chain_id(&self) -> u64 {
+        self.1
     }
 }
