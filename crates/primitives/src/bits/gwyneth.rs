@@ -498,4 +498,9 @@ impl Address {
     pub fn chain_id(&self) -> u64 {
         self.1
     }
+
+    /// Returns a new address with the specified chain id.
+    pub fn on_chain(self, chain_id: u64) -> Address {
+        Address(self.0, chain_id)
+    }
 }
