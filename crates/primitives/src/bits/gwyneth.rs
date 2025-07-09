@@ -297,7 +297,7 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
                 $n
             }
 
-            $crate::impl_getrandom!();
+            $crate::impl_getrandom_with_chain_id!();
             $crate::impl_rand!();
 
             /// Create a new byte array from the given slice `src`.
@@ -454,6 +454,55 @@ macro_rules! impl_rlp_with_chain_id {
             $n + $crate::private::alloy_rlp::length_of_length($n)
         });
     };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "getrandom")]
+macro_rules! impl_getrandom_with_chain_id {
+    () => {
+        /// Creates a new fixed byte array with the default cryptographic random number
+        /// generator and the default chain ID.
+        #[inline]
+        #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn random() -> Self {
+            Self($crate::FixedBytes::random(), $crate::DEFAULT_CHAIN_ID)
+        }
+
+        /// Tries to create a new fixed byte array with the default cryptographic random number
+        /// generator and the default chain ID.
+        #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error> {
+            $crate::FixedBytes::try_random().map(|fb| Self(fb, $crate::DEFAULT_CHAIN_ID))
+        }
+
+        /// Fills this fixed byte array with the default cryptographic random number generator.
+        #[inline]
+        #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn randomize(&mut self) {
+            self.0.randomize();
+        }
+
+        /// Tries to fill this fixed byte array with the default cryptographic random number
+        /// generator.
+        #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn try_randomize(
+            &mut self,
+        ) -> $crate::private::Result<(), $crate::private::getrandom::Error> {
+            self.0.try_randomize()
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "getrandom"))]
+macro_rules! impl_getrandom_with_chain_id {
+    () => {};
 }
 
 #[doc(hidden)]
