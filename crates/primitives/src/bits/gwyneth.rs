@@ -265,8 +265,8 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
         $crate::impl_rlp_with_chain_id!($name, $n);
         $crate::impl_serde_with_chain_id!($name);
         $crate::impl_allocative!($name);
-        $crate::impl_arbitrary!($name, $n);
-        $crate::impl_rand!($name);
+        $crate::impl_arbitrary_with_chain_id!($name, $n);
+        $crate::impl_rand_with_chain_id!($name);
         $crate::impl_diesel!($name, $n);
 
         impl $name {
@@ -503,6 +503,92 @@ macro_rules! impl_getrandom_with_chain_id {
 #[cfg(not(feature = "getrandom"))]
 macro_rules! impl_getrandom_with_chain_id {
     () => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "arbitrary"))]
+macro_rules! impl_arbitrary_with_chain_id {
+    ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_with_chain_id {
+    ($t:ty, $n:literal) => {
+        impl $crate::private::arbitrary::Arbitrary for $t {
+            #[inline]
+            fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'_>) -> $crate::private::arbitrary::Result<Self> {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary(u)
+                    .map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
+            }
+
+            #[inline]
+            fn arbitrary_take_rest(u: $crate::private::arbitrary::Unstructured<'_>) -> $crate::private::arbitrary::Result<Self> {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary_take_rest(u)
+                    .map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
+            }
+        }
+
+        // For proptest support
+        #[cfg(feature = "arbitrary")]
+        impl $crate::private::proptest::arbitrary::Arbitrary for $t {
+            type Parameters = ();
+            type Strategy = $crate::private::proptest::strategy::Map<
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Strategy,
+                fn($crate::FixedBytes<$n>) -> Self,
+            >;
+
+            #[inline]
+            fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary_with(())
+                    .prop_map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "rand"))]
+macro_rules! impl_rand_with_chain_id {
+    ($t:ty) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "rand")]
+macro_rules! impl_rand_with_chain_id {
+    ($t:ty) => {
+        impl $crate::private::rand::distributions::Distribution<$t>
+            for $crate::private::rand::distributions::Standard
+        {
+            #[inline]
+            fn sample<R: $crate::private::rand::Rng + ?Sized>(&self, rng: &mut R) -> $t {
+                <$t>::new($crate::FixedBytes::random_with(rng).0)
+            }
+        }
+
+        impl $t {
+            /// Creates a new fixed byte array with cryptographically random content and default
+            /// chain ID.
+            #[inline]
+            pub fn random_with<R: $crate::private::rand::Rng + ?Sized>(rng: &mut R) -> Self {
+                Self($crate::FixedBytes::random_with(rng), $crate::DEFAULT_CHAIN_ID)
+            }
+
+            /// Tries to create a new fixed byte array with cryptographically random content and
+            /// default chain ID.
+            #[inline]
+            pub fn try_random_with<R: $crate::private::rand::Rng + ?Sized>(
+                rng: &mut R,
+            ) -> Result<Self, $crate::private::rand::Error> {
+                $crate::FixedBytes::try_random_with(rng)
+                    .map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
+            }
+        }
+    };
 }
 
 #[doc(hidden)]
