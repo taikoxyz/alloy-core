@@ -298,7 +298,6 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
             }
 
             $crate::impl_getrandom_with_chain_id!();
-            $crate::impl_rand!();
 
             /// Create a new byte array from the given slice `src`.
             ///
@@ -504,6 +503,7 @@ macro_rules! impl_getrandom_with_chain_id {
 macro_rules! impl_getrandom_with_chain_id {
     () => {};
 }
+// Fixed implementations based on the original macros
 
 #[doc(hidden)]
 #[macro_export]
@@ -517,32 +517,47 @@ macro_rules! impl_arbitrary_with_chain_id {
 #[cfg(feature = "arbitrary")]
 macro_rules! impl_arbitrary_with_chain_id {
     ($t:ty, $n:literal) => {
-        impl $crate::private::arbitrary::Arbitrary for $t {
+        // Fix 1: Add explicit lifetime parameter - based on original impl_arbitrary
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
+        impl<'a> $crate::private::arbitrary::Arbitrary<'a> for $t {
             #[inline]
-            fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'_>) -> $crate::private::arbitrary::Result<Self> {
+            fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
                 <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary(u)
                     .map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
             }
 
             #[inline]
-            fn arbitrary_take_rest(u: $crate::private::arbitrary::Unstructured<'_>) -> $crate::private::arbitrary::Result<Self> {
+            fn arbitrary_take_rest(u: $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
                 <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary_take_rest(u)
                     .map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
             }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::size_hint(depth)
+            }
         }
 
-        // For proptest support
-        #[cfg(feature = "arbitrary")]
+        // For proptest support - based on original impl_arbitrary
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
         impl $crate::private::proptest::arbitrary::Arbitrary for $t {
-            type Parameters = ();
+            type Parameters = <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Parameters;
             type Strategy = $crate::private::proptest::strategy::Map<
                 <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Strategy,
                 fn($crate::FixedBytes<$n>) -> Self,
             >;
 
             #[inline]
-            fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary_with(())
+            fn arbitrary() -> Self::Strategy {
+                use $crate::private::proptest::strategy::Strategy;
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary()
+                    .prop_map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
+            }
+
+            #[inline]
+            fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
+                use $crate::private::proptest::strategy::Strategy;
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary_with(args)
                     .prop_map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
             }
         }
@@ -561,31 +576,55 @@ macro_rules! impl_rand_with_chain_id {
 #[cfg(feature = "rand")]
 macro_rules! impl_rand_with_chain_id {
     ($t:ty) => {
-        impl $crate::private::rand::distributions::Distribution<$t>
-            for $crate::private::rand::distributions::Standard
+        // Fix 2: Use the exact same pattern as the original impl_rand macro
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+        impl $crate::private::rand::distr::Distribution<$t>
+            for $crate::private::rand::distr::StandardUniform
         {
             #[inline]
             fn sample<R: $crate::private::rand::Rng + ?Sized>(&self, rng: &mut R) -> $t {
-                <$t>::new($crate::FixedBytes::random_with(rng).0)
+                <$t>::random_with(rng)
             }
         }
 
         impl $t {
-            /// Creates a new fixed byte array with cryptographically random content and default
-            /// chain ID.
+            /// Creates a new fixed byte array with the given random number generator.
             #[inline]
-            pub fn random_with<R: $crate::private::rand::Rng + ?Sized>(rng: &mut R) -> Self {
+            #[doc(alias = "random_using")]
+            #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+            pub fn random_with<R: $crate::private::rand::RngCore + ?Sized>(rng: &mut R) -> Self {
                 Self($crate::FixedBytes::random_with(rng), $crate::DEFAULT_CHAIN_ID)
             }
 
-            /// Tries to create a new fixed byte array with cryptographically random content and
-            /// default chain ID.
+            /// Tries to create a new fixed byte array with the given random number generator.
             #[inline]
-            pub fn try_random_with<R: $crate::private::rand::Rng + ?Sized>(
+            #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+            pub fn try_random_with<R: $crate::private::rand::TryRngCore + ?Sized>(
                 rng: &mut R,
-            ) -> Result<Self, $crate::private::rand::Error> {
+            ) -> $crate::private::Result<Self, R::Error> {
                 $crate::FixedBytes::try_random_with(rng)
                     .map(|bytes| Self(bytes, $crate::DEFAULT_CHAIN_ID))
+            }
+
+            /// Fills this fixed byte array with the given random number generator.
+            #[inline]
+            #[doc(alias = "randomize_using")]
+            #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+            pub fn randomize_with<R: $crate::private::rand::RngCore + ?Sized>(
+                &mut self,
+                rng: &mut R,
+            ) {
+                self.0.randomize_with(rng);
+            }
+
+            /// Tries to fill this fixed byte array with the given random number generator.
+            #[inline]
+            #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+            pub fn try_randomize_with<R: $crate::private::rand::TryRngCore + ?Sized>(
+                &mut self,
+                rng: &mut R,
+            ) -> $crate::private::Result<(), R::Error> {
+                self.0.try_randomize_with(rng)
             }
         }
     };
