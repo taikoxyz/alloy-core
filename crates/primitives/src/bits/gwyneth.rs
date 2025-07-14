@@ -266,7 +266,7 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
         $crate::impl_serde_with_chain_id!($name);
         $crate::impl_allocative!($name);
         $crate::impl_arbitrary!($name, $n);
-        $crate::impl_rand!($name);
+        $crate::impl_rand_with_chain_id!($name);
         $crate::impl_diesel!($name, $n);
 
         impl $name {
@@ -297,8 +297,8 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
                 $n
             }
 
-            $crate::impl_getrandom!();
-            $crate::impl_rand!();
+            $crate::impl_getrandom_with_chain_id!();
+            $crate::impl_rand_with_chain_id!();
 
             /// Create a new byte array from the given slice `src`.
             ///
@@ -461,6 +461,126 @@ macro_rules! impl_rlp_with_chain_id {
 #[cfg(not(feature = "rlp"))]
 macro_rules! impl_rlp_with_chain_id {
     ($t:ty, $n:literal) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "rand")]
+macro_rules! impl_rand_with_chain_id {
+    () => {
+        /// Creates a new fixed byte array with the given random number generator.
+        #[inline]
+        #[doc(alias = "random_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+        pub fn random_with<R: $crate::private::rand::RngCore + ?Sized>(rng: &mut R) -> Self {
+            Self($crate::FixedBytes::random_with(rng), crate::DEFAULT_CHAIN_ID)
+        }
+
+        /// Tries to create a new fixed byte array with the given random number generator.
+        #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+        pub fn try_random_with<R: $crate::private::rand::TryRngCore + ?Sized>(
+            rng: &mut R,
+        ) -> $crate::private::Result<Self, R::Error> {
+            $crate::FixedBytes::try_random_with(rng)
+                .map(|address| Self(address, crate::DEFAULT_CHAIN_ID))
+        }
+
+        /// Fills this fixed byte array with the given random number generator.
+        #[inline]
+        #[doc(alias = "randomize_using")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+        pub fn randomize_with<R: $crate::private::rand::RngCore + ?Sized>(&mut self, rng: &mut R) {
+            self.0.randomize_with(rng);
+        }
+
+        /// Tries to fill this fixed byte array with the given random number generator.
+        #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+        pub fn try_randomize_with<R: $crate::private::rand::TryRngCore + ?Sized>(
+            &mut self,
+            rng: &mut R,
+        ) -> $crate::private::Result<(), R::Error> {
+            self.0.try_randomize_with(rng)
+        }
+    };
+
+    ($t:ty) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "rand")))]
+        impl $crate::private::rand::distr::Distribution<$t>
+            for $crate::private::rand::distr::StandardUniform
+        {
+            #[inline]
+            fn sample<R: $crate::private::rand::Rng + ?Sized>(&self, rng: &mut R) -> $t {
+                <$t>::random_with(rng)
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "rand"))]
+macro_rules! impl_rand_with_chain_id {
+    ($($t:tt)*) => {};
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "getrandom")]
+macro_rules! impl_getrandom_with_chain_id {
+    () => {
+        /// Creates a new fixed byte array with the default cryptographic random number
+        /// generator.
+        ///
+        /// This is `rand::thread_rng` if the "rand" and "std" features are enabled, otherwise
+        /// it uses `getrandom::getrandom`. Both are cryptographically secure.
+        #[inline]
+        #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn random() -> Self {
+            Self($crate::FixedBytes::random(), crate::DEFAULT_CHAIN_ID)
+        }
+
+        /// Tries to create a new fixed byte array with the default cryptographic random number
+        /// generator.
+        ///
+        /// See [`random`](Self::random) for more details.
+        #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn try_random() -> $crate::private::Result<Self, $crate::private::getrandom::Error> {
+            $crate::FixedBytes::try_random().map(|address| Self(address, crate::DEFAULT_CHAIN_ID))
+        }
+
+        /// Fills this fixed byte array with the default cryptographic random number generator.
+        ///
+        /// See [`random`](Self::random) for more details.
+        #[inline]
+        #[track_caller]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn randomize(&mut self) {
+            self.0.randomize();
+        }
+
+        /// Tries to fill this fixed byte array with the default cryptographic random number
+        /// generator.
+        ///
+        /// See [`random`](Self::random) for more details.
+        #[inline]
+        #[cfg_attr(docsrs, doc(cfg(feature = "getrandom")))]
+        pub fn try_randomize(
+            &mut self,
+        ) -> $crate::private::Result<(), $crate::private::getrandom::Error> {
+            self.0.try_randomize()
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "getrandom"))]
+macro_rules! impl_getrandom_with_chain_id {
+    () => {};
 }
 
 impl From<(U160, u64)> for Address {
