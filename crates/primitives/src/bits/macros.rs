@@ -970,8 +970,14 @@ mod tests {
         assert_eq!(A0, Address::ZERO);
 
         const A1: Address = address!("0x0102030405060708090a0b0c0d0e0f1011121314");
-        const A2: Address = Address(fixed_bytes!("0x0102030405060708090a0b0c0d0e0f1011121314"));
-        const A3: Address = Address(FixedBytes(hex!("0x0102030405060708090a0b0c0d0e0f1011121314")));
+        const A2: Address = Address(
+            fixed_bytes!("0x0102030405060708090a0b0c0d0e0f1011121314"),
+            crate::DEFAULT_CHAIN_ID,
+        );
+        const A3: Address = Address(
+            FixedBytes(hex!("0x0102030405060708090a0b0c0d0e0f1011121314")),
+            crate::DEFAULT_CHAIN_ID,
+        );
         assert_eq!(A1, A2);
         assert_eq!(A1, A3);
         assert_eq!(A1, hex!("0x0102030405060708090a0b0c0d0e0f1011121314"));

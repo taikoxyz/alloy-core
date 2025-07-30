@@ -89,7 +89,7 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
         impl $crate::private::PartialOrd for $name {
             #[inline]
             fn partial_cmp(&self, other: &Self) -> Option<$crate::private::core::cmp::Ordering> {
-                Some(self.0.cmp(&other.0))
+                Some(self.cmp(other))
             }
         }
 
@@ -265,7 +265,7 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
         $crate::impl_rlp_with_chain_id!($name, $n);
         $crate::impl_serde_with_chain_id!($name);
         $crate::impl_allocative!($name);
-        $crate::impl_arbitrary!($name, $n);
+        $crate::impl_arbitrary_with_chain_id!($name, $n);
         $crate::impl_rand_with_chain_id!($name);
         $crate::impl_diesel!($name, $n);
 
@@ -588,6 +588,61 @@ impl From<(U160, u64)> for Address {
     fn from((value, chain_id): (U160, u64)) -> Self {
         Self(FixedBytes(value.to_be_bytes()), chain_id)
     }
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(feature = "arbitrary")]
+macro_rules! impl_arbitrary_with_chain_id {
+    ($t:ty, $n:literal) => {
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
+        impl<'a> $crate::private::arbitrary::Arbitrary<'a> for $t {
+            #[inline]
+            fn arbitrary(u: &mut $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary(u).map(|address| Self(address, crate::DEFAULT_CHAIN_ID))
+            }
+
+            #[inline]
+            fn arbitrary_take_rest(u: $crate::private::arbitrary::Unstructured<'a>) -> $crate::private::arbitrary::Result<Self> {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::arbitrary_take_rest(u).map(|address| Self(address, crate::DEFAULT_CHAIN_ID))
+            }
+
+            #[inline]
+            fn size_hint(depth: usize) -> (usize, Option<usize>) {
+                <$crate::FixedBytes<$n> as $crate::private::arbitrary::Arbitrary>::size_hint(depth)
+            }
+        }
+
+        #[cfg_attr(docsrs, doc(cfg(feature = "arbitrary")))]
+        impl $crate::private::proptest::arbitrary::Arbitrary for $t {
+            type Parameters = <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Parameters;
+            type Strategy = $crate::private::proptest::strategy::Map<
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::Strategy,
+                fn($crate::FixedBytes<$n>) -> Self,
+            >;
+
+            #[inline]
+            fn arbitrary() -> Self::Strategy {
+                use $crate::private::proptest::strategy::Strategy;
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary()
+                    .prop_map(|address| Self(address, crate::DEFAULT_CHAIN_ID))
+            }
+
+            #[inline]
+            fn arbitrary_with(args: Self::Parameters) -> Self::Strategy {
+                use $crate::private::proptest::strategy::Strategy;
+                <$crate::FixedBytes<$n> as $crate::private::proptest::arbitrary::Arbitrary>::arbitrary_with(args)
+                    .prop_map(|address| Self(address, crate::DEFAULT_CHAIN_ID))
+            }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+#[cfg(not(feature = "arbitrary"))]
+macro_rules! impl_arbitrary_with_chain_id {
+    ($t:ty, $n:literal) => {};
 }
 
 impl Address {
