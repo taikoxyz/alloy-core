@@ -39,7 +39,6 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
             Copy,
             Default,
             Eq,
-            Hash,
             $crate::private::derive_more::AsMut,
             $crate::private::derive_more::AsRef,
             $crate::private::derive_more::BitAnd,
@@ -76,6 +75,12 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
             #[inline]
             fn eq(&self, other: &Self) -> bool {
                 self.0 == other.0
+            }
+        }
+
+        impl $crate::private::core::hash::Hash for $name {
+            fn hash<H: $crate::private::core::hash::Hasher>(&self, state: &mut H) {
+                self.0.hash(state);
             }
         }
 
