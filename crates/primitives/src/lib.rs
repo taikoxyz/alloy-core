@@ -34,7 +34,7 @@ pub use aliases::{
 mod bits;
 pub use bits::{
     Address, AddressChecksumBuffer, AddressError, Bloom, BloomInput, FixedBytes, Function,
-    BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES,
+    BLOOM_BITS_PER_ITEM, BLOOM_SIZE_BITS, BLOOM_SIZE_BYTES, DEFAULT_CHAIN_ID,
 };
 
 #[path = "bytes/mod.rs"]
@@ -101,8 +101,9 @@ pub mod private {
     pub use core::{
         self,
         borrow::{Borrow, BorrowMut},
-        cmp::Ordering,
+        cmp::{Ord, Ordering, PartialEq, PartialOrd},
         prelude::rust_2021::*,
+        str::FromStr,
     };
     pub use derive_more;
 
