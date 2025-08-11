@@ -214,7 +214,10 @@ macro_rules! wrap_fixed_bytes_with_chain_id {
 
         impl $crate::private::core::fmt::Debug for $name {
             fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-                $crate::private::core::fmt::Debug::fmt(&self.0, f)
+                f.debug_tuple("ChainAddress")
+                    .field(&self.1)
+                    .field(&self.0)
+                    .finish()
             }
         }
 
@@ -678,8 +681,8 @@ impl Address {
         self.1
     }
 
-    /// Returns a new address with the specified chain id.
-    pub fn on_chain(self, chain_id: u64) -> Address {
+    /// create a new address with the specified chain id.
+    pub fn with_chain_id(self, chain_id: u64) -> Address {
         Address(self.0, chain_id)
     }
 }
